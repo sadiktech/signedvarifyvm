@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:signature="http://www.mulesoft.org/schema/mule/signature" xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/signature http://www.mulesoft.org/schema/mule/signature/current/mule-signature.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <signature:config name="Signature" doc:name="Signature">
+        <signature:jce-signer-config key="mahindracomviva1"/>
+    </signature:config>
+    <vm:connector name="VM" validateConnections="true" doc:name="VM"/>
+    <flow name="signedvarifyvmFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/signedVarifyVM" allowedMethods="POST" doc:name="HTTP"/>
+        <string-to-byte-array-transformer doc:name="String to Byte Array"/>
+        <signature:sign config-ref="Signature" variable="signedVariable" doc:name="Signature"/>
+        <set-session-variable variableName="signedVariableSession" value="#[flowVars.signedVariable]" doc:name="Session Variable"/>
+        <vm:outbound-endpoint exchange-pattern="one-way" path="signedvm" connector-ref="VM" doc:name="VM"/>
+        <object-to-string-transformer doc:name="Object to String"/>
+        <set-payload value="This is payload sent to VM #[payload]" doc:name="Set Payload"/>
+    </flow>
+    <flow name="signedvarifyvmFlow1">
+        <vm:inbound-endpoint exchange-pattern="one-way" path="signedvm" doc:name="VM"/>
+        <object-to-string-transformer doc:name="Object to String"/>
+        <signature:verify-signature config-ref="Signature" expectedSignature="#[sessionVars.signedVariableSession]" doc:name="Signature"/>
+        <logger message="This is final Paylaod #[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+</mule>
